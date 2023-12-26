@@ -5,7 +5,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 
-    <title>PA#1</title>
+    <title>PA#2</title>
     <style>
         body {
             background-color: #EEEEEE;
@@ -20,14 +20,28 @@
 </head>
 
 <body onload="init()">
-    <h1>Illia Ostrovskyi TR-32mp PA1</h1>
+    <h1>Illia Ostrovskyi TR-32mp PA2</h1>
     <h2>Surface of Revolution "Pear"</h2>
 
     <p id="message">Drag your mouse on the cube to rotate it.<br>
         (On a touch screen, you can use your finger.)</p>
 
-    <label for="amt">amount of steps:</label>
-    <input type="range" name="amt" id="amt" min="4" , max="200" step="4" value="20" onchange="updateWireframe()">
+    <label for="color">color of the surface</label>
+    <input type="color" name="color" id="color" value="#00ffff" onchange="draw()">
+    <div>
+        x
+        <input type="range" name="x" id="x" min="-2" max="2" value="0" step="0.1">
+        y
+        <input type="range" name="y" id="y" min="-2" max="2" value="2" step="0.1">
+        z
+        <input type="range" name="z" id="z" min="-2" max="2" value="2" step="0.1">
+    </div>
+    <div>
+        range
+        <input type="range" name="range" id="range" value="1" min="0" max="2" step="0.1">
+        focus
+        <input type="range" name="focus" id="focus" value="0.01" min="0" max="0.2" step="0.001">
+    </div>
 
 
     <div id="canvas-holder">
