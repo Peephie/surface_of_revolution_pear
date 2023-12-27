@@ -3,9 +3,71 @@
 // Vertex shader
 const vertexShaderSource = `
 attribute vec3 vertex;
+attribute vec3 normal;
+attribute vec2 texture;
+uniform vec2 pointex;
 uniform mat4 ModelViewProjectionMatrix;
+uniform vec3 pos;
+varying vec3 toL, toV, nor;
+varying vec2 tex;
+uniform float range;
+
+mat4 translation(vec3 t) {
+    mat4 dst;
+
+    dst[0][0] = 1.0;
+    dst[0][ 1] = 0.0;
+    dst[0][ 2] = 0.0;
+    dst[0][ 3] = 0.0;
+    dst[1][ 0] = 0.0;
+    dst[1][ 1] = 1.0;
+    dst[1][ 2] = 0.0;
+    dst[1][ 3] = 0.0;
+    dst[2][ 0] = 0.0;
+    dst[2][ 1] = 0.0;
+    dst[2][ 2] = 1.0;
+    dst[2][ 3] = 0.0;
+    dst[3][ 0] = t.x;
+    dst[3][ 1] = t.y;
+    dst[3][ 2] = t.z;
+    dst[3][ 3] = 1.0;
+
+    return dst;
+}
+
+mat4 rotation(float angleInRadians) {
+    mat4 dst;
+    float c = cos(angleInRadians);
+    float s = sin(angleInRadians);
+
+    dst[0][0] = c;
+    dst[0][ 1] = s;
+    dst[0][ 2] = 0.0;
+    dst[0][ 3] = 0.0;
+    dst[1][ 0] = -s;
+    dst[1][ 1] = c;
+    dst[1][ 2] = 0.0;
+    dst[1][ 3] = 0.0;
+    dst[2][ 0] = 0.0;
+    dst[2][ 1] = 0.0;
+    dst[2][ 2] = 1.0;
+    dst[2][ 3] = 0.0;
+    dst[3][ 0] = 0.0;
+    dst[3][ 1] = 0.0;
+    dst[3][ 2] = 0.0;
+    dst[3][ 3] = 1.0;
+
+    return dst;
+}
 
 void main() {
+    vec4 tex1 = translation(vec3(-pointex,0.0))*vec4(texture,0.,1.);
+    vec4 tex2 = rotation(range)*tex1;
+    vec4 tex3 = translation(vec3(pointex,0.0))*tex2;
+    toL = pos-vertex;
+    toV = -vertex;
+    nor = normal;
+    tex = tex3.st;
     gl_Position = ModelViewProjectionMatrix * vec4(vertex,1.0);
 }`;
 
@@ -19,6 +81,26 @@ const fragmentShaderSource = `
 #endif
 
 uniform vec4 color;
+uniform vec3 dir;
+varying vec3 toL, toV, nor;
+varying vec2 tex;
+uniform float range;
+uniform float focus;
+uniform sampler2D tmu;
 void main() {
-    gl_FragColor = color;
+    vec3 toLi =normalize(toL);
+    vec3 toVi =normalize(toV);
+    vec3 norm =normalize(nor);
+    vec3 halfVector = normalize(toLi + toVi);
+    float dotFromDirection = dot(toLi,-dir);
+    float inLight = smoothstep(range-focus,range, dotFromDirection);
+    float light = inLight * dot(norm, toLi);
+    float specular = inLight * pow(dot(norm, halfVector), 100.0);
+    gl_FragColor = vec4(color.rgb*light+specular,1.);
+    vec4 texC = texture2D(tmu,tex);
+    //gl_FragColor = color;
+    gl_FragColor = texC;
+    if(focus>10.){
+        gl_FragColor = vec4(1.0);
+    }
 }`;
