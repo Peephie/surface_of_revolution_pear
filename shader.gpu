@@ -20,5 +20,17 @@ const fragmentShaderSource = `
 
 uniform vec4 color;
 void main() {
-    gl_FragColor = color;
+    vec3 toLi =normalize(toL);
+    vec3 toVi =normalize(toV);
+    vec3 norm =normalize(nor);
+    vec3 halfVector = normalize(toLi + toVi);
+    float dotFromDirection = dot(toLi,-dir);
+    float inLight = smoothstep(range-focus,range, dotFromDirection);
+    float light = inLight * dot(norm, toLi);
+    float specular = inLight * pow(dot(norm, halfVector), 100.0);
+    gl_FragColor = vec4(color.rgb*light+specular,1.);
+    //gl_FragColor = color;
+    if(focus>10.){
+        gl_FragColor = vec4(1.0);
+    }
 }`;

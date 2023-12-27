@@ -4,6 +4,7 @@ let gl;                         // The webgl context.
 let surface;                    // A surface model
 let shProgram;                  // A shader program
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
+let sphere, line;
 
 function deg2rad(angle) {
     return angle * Math.PI / 180;
@@ -25,6 +26,14 @@ function Model(name) {
     }
 
     this.Draw = function () {
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
+        gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(shProgram.iAttribVertex);
+
+        gl.drawArrays(gl.LINE_STRIP, 0, this.count);
+    }
+    this.DrawLine = function () {
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
@@ -63,13 +72,14 @@ function draw() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     /* Set the values of the projection transformation */
-    let projection = m4.perspective(Math.PI / 8, 1, 8, 12);
+    let cs = 5
+    let projection = m4.orthographic(-cs, cs, -cs, cs, -cs, cs);
 
     /* Get the view matrix from the SimpleRotator object.*/
     let modelView = spaceball.getViewMatrix();
 
-    let rotateToPointZero = m4.axisRotation([0.707, 0.707, 0], 0.7);
-    let translateToPointZero = m4.translation(0, 0, -10);
+    let rotateToPointZero = m4.axisRotation([0.707, 0.0, 0], 5);
+    let translateToPointZero = m4.translation(0, 0, -1);
 
     let matAccum0 = m4.multiply(rotateToPointZero, modelView);
     let matAccum1 = m4.multiply(translateToPointZero, matAccum0);
@@ -81,9 +91,24 @@ function draw() {
     gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
 
     /* Draw the six faces of a cube, with different colors. */
-    gl.uniform4fv(shProgram.iColor, [0, 1, 1, 1]);
+
+    gl.uniform4fv(shProgram.iColor, [...hexToRgb(document.getElementById('color').value), 1]);
+    let x = 5*sin(Date.now()*0.001),
+        y = document.getElementById('y').value,
+        z = document.getElementById('z').value
+    gl.uniform3fv(shProgram.iPos, [5*sin(Date.now()*0.001), y, z]);
+    gl.uniform3fv(shProgram.iDir, [-x, -y, -z]);
+    gl.uniform1f(shProgram.iRange, document.getElementById('range').value);
+    gl.uniform1f(shProgram.iFocus, document.getElementById('focus').value);
 
     surface.Draw();
+    gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, m4.multiply(modelViewProjection,
+        m4.translation(x,y,z)
+    ));
+    gl.uniform1f(shProgram.iFocus, 100);
+    sphere.Draw()
+    line.BufferData([[0, 0, 0, -x, -y, -z]])
+    line.DrawLine();
 }
 
 function updateWireframe() {
@@ -124,6 +149,45 @@ const a = 2, c = 2
 function r(z) {
     return z * sqrt(z * (a - z)) / c
 }
+function CreateSphereData() {
+    let vertexList = [];
+    let normalList = [];
+
+    let u = 0,
+        t = 0;
+    while (u < Math.PI * 2) {
+        while (t < Math.PI) {
+            let v = getSphereVertex(u, t);
+            let w = getSphereVertex(u + 0.1, t);
+            let wv = getSphereVertex(u, t + 0.1);
+            let ww = getSphereVertex(u + 0.1, t + 0.1);
+            vertexList.push(v.x, v.y, v.z);
+            normalList.push(v.x, v.y, v.z);
+            vertexList.push(w.x, w.y, w.z);
+            normalList.push(w.x, w.y, w.z);
+            vertexList.push(wv.x, wv.y, wv.z);
+            normalList.push(wv.x, wv.y, wv.z);
+            vertexList.push(wv.x, wv.y, wv.z);
+            normalList.push(wv.x, wv.y, wv.z);
+            vertexList.push(w.x, w.y, w.z);
+            normalList.push(w.x, w.y, w.z);
+            vertexList.push(ww.x, ww.y, ww.z);
+            normalList.push(ww.x, ww.y, ww.z);
+            t += 0.1;
+        }
+        t = 0;
+        u += 0.1;
+    }
+    return [vertexList, normalList]
+}
+const radius = 0.2;
+function getSphereVertex(long, lat) {
+    return {
+        x: radius * Math.cos(long) * Math.sin(lat),
+        y: radius * Math.sin(long) * Math.sin(lat),
+        z: radius * Math.cos(lat)
+    }
+}
 
 
 /* Initialize the WebGL context. Called from init() */
@@ -138,7 +202,11 @@ function initGL() {
     shProgram.iColor = gl.getUniformLocation(prog, "color");
 
     surface = new Model('Surface');
+    sphere = new Model('Surface');
+    line = new Model('Surface');
     surface.BufferData(CreateSurfaceData());
+    sphere.BufferData(CreateSphereData())
+    line.BufferData([[0, 0, 0, 1, 1, 1]])
 
     gl.enable(gl.DEPTH_TEST);
 }
